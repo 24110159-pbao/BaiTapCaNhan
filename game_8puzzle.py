@@ -4,7 +4,7 @@ from tkinter.scrolledtext import ScrolledText
 import time
 
 """
-    https://github.com/24110159-pbao/game_8puzzle_2_truonghop.git
+    https://github.com/24110159-pbao/BaiTapCaNhan.git
     Rule1: nếu vị trí ô trống (0) có row > 0 thì có thể di chuyển lên trên (Up), bằng cách hoán đổi với ô ở index - 3
     Rule2: nếu vị trí ô trống (0) có row < 2 thì có thể di chuyển xuống dưới (Down), bằng cách hoán đổi với ô ở index + 3
     Rule3: nếu vị trí ô trống (0) có col > 0 thì có thể di chuyển sang trái (Left), bằng cách hoán đổi với ô ở index - 1
