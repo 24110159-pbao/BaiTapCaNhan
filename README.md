@@ -1,4 +1,4 @@
-# 8-Puzzle Solver - BFS, DFS, IDS
+# 8-Puzzle Solver - BFS, DFS, IDS, UCS, GREEDY
 
 ## Giới thiệu
 
@@ -194,6 +194,83 @@ Space : O(bd)
 ```
 
 ---
+# 4. Uniform Cost Search (UCS)
+
+### Ý tưởng
+
+UCS mở rộng node có chi phí nhỏ nhất trước.
+
+Trong chương trình này:
+
+* cost được tính dựa trên heuristic
+* heuristic = số ô sai vị trí
+
+Node có `path_cost` nhỏ hơn sẽ được ưu tiên mở rộng trước.
+
+### Đặc điểm
+
+* Sử dụng frontier được sắp xếp theo cost
+* Node có cost nhỏ nhất luôn được mở rộng trước
+* Có sử dụng heuristic để định hướng tìm kiếm
+
+### Ưu điểm
+
+* Tìm kiếm có định hướng tốt hơn BFS/DFS
+* Có thể giảm số lượng node cần mở rộng
+* Hoạt động hiệu quả trên bài toán 8-puzzle
+
+### Nhược điểm
+
+* Frontier phải sắp xếp liên tục
+* Tốn nhiều bộ nhớ khi số node lớn
+* Không đảm bảo tối ưu tuyệt đối do sử dụng heuristic
+
+### Độ phức tạp
+
+```text
+Time  : O(b^d)
+Space : O(b^d)
+```
+
+---
+
+## 5. Greedy Best First Search
+
+### Ý tưởng
+
+Greedy chỉ quan tâm node nào gần trạng thái đích nhất.
+
+Trong chương trình:
+
+* heuristic = số ô sai vị trí
+
+Node có heuristic nhỏ nhất sẽ được mở rộng trước.
+
+### Đặc điểm
+
+* Chỉ sử dụng heuristic
+* Không quan tâm tổng cost đã đi
+* Frontier được sắp xếp theo heuristic
+
+### Ưu điểm
+
+* Tốc độ tìm kiếm nhanh
+* Giảm số lượng node cần duyệt
+* Phù hợp với bài toán 8-puzzle
+
+### Nhược điểm
+
+* Không đảm bảo tìm được lời giải tối ưu
+* Có thể đi vào hướng không tốt
+* Kết quả phụ thuộc vào heuristic
+
+### Độ phức tạp
+
+```text
+Time  : O(b^m)
+Space : O(b^m)
+```
+
 
 # Giao diện (UI)
 
