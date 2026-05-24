@@ -96,24 +96,6 @@ class Problem:
 
         return new_state
 
-
-
-def CHILD_NODE(problem, parent, action):
-
-    next_state = problem.result(parent.state, action)
-
-    next_cost = parent.path_cost + 1
-
-    child = Node(
-        next_state,
-        parent,
-        action,
-        next_cost
-    )
-
-    return child
-
-
 def print_solution(node):
 
     path = []
@@ -144,13 +126,26 @@ def print_solution(node):
         print()
 
 
+def CHILD_NODE(problem, parent, action):
+
+    next_state = problem.result(parent.state, action)
+
+    next_cost = parent.path_cost + 1
+
+    child = Node(
+        next_state,
+        parent,
+        action,
+        next_cost
+    )
+    return child
+
 
 
 def deep_first_search(problem):
 
     # node gốc
     node = Node(problem.initial)
-
 
     if problem.goal_test(node.state):
 
@@ -319,6 +314,165 @@ def iterative_deepening_search(problem, max_depth=27):
 
     return None
 
+# cho UCS và Greedy, hàm heuristic sẽ là số ô sai vị trí so với goal_state
+def KiemTraSoOSai(initial_state,goal_state):
+    count = 0
+
+    for i in range(9):
+        if initial_state[i] != goal_state[i]:
+            count += 1
+
+    return count
+
+def sort_frontier(frontier, node):
+
+    for i in range(len(frontier)):
+
+        if frontier[i].state == node.state:
+
+            if node.path_cost < frontier[i].path_cost:
+
+                frontier[i] = node
+
+            frontier.sort(key=lambda x: x.path_cost)
+            return
+
+    frontier.append(node)
+
+    frontier.sort(key=lambda x: x.path_cost)
+
+
+
+def CHILD_NODE_USC(problem, parent, action):
+
+    next_state = problem.result(parent.state, action)
+    so_osai = KiemTraSoOSai(next_state, problem.goal)
+    next_cost = parent.path_cost + so_osai
+
+    child = Node(
+        next_state,
+        parent,
+        action,
+        next_cost
+    )
+
+    return child
+
+
+
+
+def UCS(problem):
+
+    # node gốc
+    node = Node(problem.initial)
+
+
+    if problem.goal_test(node.state):
+
+        return node
+
+
+    frontier = []
+    frontier.append(node)
+
+    reached = []
+
+
+    while len(frontier) > 0:
+
+        
+
+        node = frontier.pop(0)  # pop sẽ trả về giá trị của phần tử được xóa đồng thời dồn các phần tử còn lại qua bên trái
+
+        reached.append(node.state)
+
+        # kiểm tra goal trước khi tạo con
+        if problem.goal_test(node.state):
+
+            return node
+
+
+        # sinh node con
+        for action in problem.actions(node.state):
+
+            child = CHILD_NODE_USC(problem, node, action)
+
+            exist = False
+
+
+            for r in reached:
+
+                if r == child.state:
+                    exist = True
+                    break
+
+
+            # nếu chưa tồn tại
+            if exist == False:
+
+                sort_frontier(frontier, child)
+
+
+    return None
+
+
+def CHILD_NODE_GREEDY(problem, parent, action):
+
+    next_state = problem.result(parent.state, action)
+    so_osai = KiemTraSoOSai(next_state, problem.goal)
+    next_cost = so_osai
+
+    child = Node(
+        next_state,
+        parent,
+        action,
+        next_cost
+    )
+
+    return child
+
+def GREEDY(problem):
+
+    node = Node(problem.initial)
+
+    if problem.goal_test(node.state):
+
+        return node
+
+    frontier = []
+    frontier.append(node)
+
+
+    reached = []
+
+    while len(frontier) > 0:
+
+        node = frontier.pop(0)
+
+        reached.append(node.state)
+
+        if problem.goal_test(node.state):
+
+            return node
+
+        for action in problem.actions(node.state):
+
+            child = CHILD_NODE_GREEDY(problem, node, action)
+
+            exist = False
+
+            for r in reached:
+
+                if r == child.state:
+
+                    exist = True
+                    break
+
+            if exist == False:
+
+                sort_frontier(frontier, child)
+
+    return None
 
 class PuzzleGUI:
 
@@ -379,7 +533,7 @@ class PuzzleGUI:
 
         self.algo_combo = ttk.Combobox(
             self.top_frame,
-            values=["BFS", "DFS", "IDS"],
+            values=["BFS", "DFS", "IDS", "UCS","GREEDY"],
             state="readonly",
             width=10,
             font=("Segoe UI", 11)
@@ -767,6 +921,12 @@ class PuzzleGUI:
         elif selected == "IDS":
 
             result = iterative_deepening_search(problem)
+        elif selected == "UCS":
+
+            result = UCS(problem)
+        elif selected == "GREEDY":
+
+            result = GREEDY(problem)
 
         end_time = time.time()
 
