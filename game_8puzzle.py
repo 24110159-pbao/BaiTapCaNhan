@@ -20,7 +20,7 @@ import time
     S:
     Trạng thái mới được tạo bằng cách hoán đổi vị trí ô trống (0) với ô lân cận theo action tương ứng, sử dụng hàm result(state, action)
 """
-
+search_log = []# lưu các suy nghĩ của thuật toán để hiển thị trên giao diện
 class Node:
     def __init__(self, state, parent=None, action=None, path_cost=0):
 
@@ -96,37 +96,9 @@ class Problem:
 
         return new_state
 
-def print_solution(node):
-
-    path = []
-
-    while node != None:
-
-        path.append(node)
-
-        node = node.parent
 
 
-    path.reverse()
-
-
-    print("====== SOLUTION ======\n")
-
-    for n in path:
-
-        print("Action:", n.action)
-        print("Cost:", n.path_cost)
-
-        s = n.state
-
-        print(s[0], s[1], s[2])
-        print(s[3], s[4], s[5])
-        print(s[6], s[7], s[8])
-
-        print()
-
-
-def CHILD_NODE(problem, parent, action):
+def CHILD_NODE(problem, parent, action):#cho deeo_first_search, breadth_first_search, depth_limited_search
 
     next_state = problem.result(parent.state, action)
 
@@ -138,12 +110,14 @@ def CHILD_NODE(problem, parent, action):
         action,
         next_cost
     )
+    search_log.append( f"Generate {action} -> {child.state}" )
     return child
 
 
 
 def deep_first_search(problem):
 
+    
     # node gốc
     node = Node(problem.initial)
 
@@ -162,6 +136,7 @@ def deep_first_search(problem):
 
 
         node = frontier.pop(-1)# pop sẽ trả về giá trị của phần tử cuối cùng được xóa 
+        search_log.append( f"\nEXPAND: {node.state}" )
         explored.append(node.state)
 
 
@@ -218,7 +193,7 @@ def breadth_first_search(problem):
 
 
         node = frontier.pop(0)# pop sẽ trả về giá trị của phần tử được xóa đồng thời dồn các phần tử còn lại qua bên trái
-
+        search_log.append( f"\nEXPAND: {node.state}" )
         explored.append(node.state)
 
 
@@ -253,6 +228,7 @@ def breadth_first_search(problem):
                     frontier.append(child)
     return None
 
+# IDS và IDA* 
 def is_cycle(node, state):
 
     while node is not None:
@@ -273,7 +249,7 @@ def depth_limited_search(problem, limit):
     while len(frontier) > 0:
 
         node = frontier.pop(-1)
-
+        search_log.append( f"\nEXPAND: {node.state}" )
         # goal test
         if problem.goal_test(node.state):
             return node
@@ -314,7 +290,7 @@ def iterative_deepening_search(problem, max_depth=27):
 
     return None
 
-# cho UCS và Greedy, hàm heuristic sẽ là số ô sai vị trí so với goal_state
+#cho UCS, Greedy, A*,IDA* để tính số ô sai so với goal_state để làm chi phí di chuyển
 def KiemTraSoOSai(initial_state,goal_state):
     count = 0
 
@@ -324,7 +300,7 @@ def KiemTraSoOSai(initial_state,goal_state):
 
     return count
 
-def sort_frontier(frontier, node):
+def sort_frontier(frontier, node): #cho UCS, Greedy, A* để sắp xếp frontier theo path_cost
 
     for i in range(len(frontier)):
 
@@ -343,7 +319,7 @@ def sort_frontier(frontier, node):
 
 
 
-def CHILD_NODE_USC(problem, parent, action):
+def CHILD_NODE_UCS(problem, parent, action):
 
     next_state = problem.result(parent.state, action)
     so_osai = KiemTraSoOSai(next_state, problem.goal)
@@ -355,11 +331,8 @@ def CHILD_NODE_USC(problem, parent, action):
         action,
         next_cost
     )
-
+    search_log.append( f"Generate {action} -> {child.state}" )
     return child
-
-
-
 
 def UCS(problem):
 
@@ -383,7 +356,7 @@ def UCS(problem):
         
 
         node = frontier.pop(0)  # pop sẽ trả về giá trị của phần tử được xóa đồng thời dồn các phần tử còn lại qua bên trái
-
+        search_log.append( f"\nEXPAND: {node.state}" )
         reached.append(node.state)
 
         # kiểm tra goal trước khi tạo con
@@ -395,7 +368,7 @@ def UCS(problem):
         # sinh node con
         for action in problem.actions(node.state):
 
-            child = CHILD_NODE_USC(problem, node, action)
+            child = CHILD_NODE_UCS(problem, node, action)
 
             exist = False
 
@@ -416,6 +389,7 @@ def UCS(problem):
     return None
 
 
+
 def CHILD_NODE_GREEDY(problem, parent, action):
 
     next_state = problem.result(parent.state, action)
@@ -428,7 +402,7 @@ def CHILD_NODE_GREEDY(problem, parent, action):
         action,
         next_cost
     )
-
+    search_log.append( f"Generate {action} -> {child.state}" )
     return child
 
 def GREEDY(problem):
@@ -448,7 +422,7 @@ def GREEDY(problem):
     while len(frontier) > 0:
 
         node = frontier.pop(0)
-
+        search_log.append( f"\nEXPAND: {node.state}" )
         reached.append(node.state)
 
         if problem.goal_test(node.state):
@@ -473,6 +447,249 @@ def GREEDY(problem):
                 sort_frontier(frontier, child)
 
     return None
+
+
+
+def mahatan_distance(state, goal):#cho A* và IDA* 
+
+    distance = 0
+
+    for i in range(1, 9):
+
+        index_state = state.index(i)
+        index_goal = goal.index(i)
+
+        row_state = index_state // 3
+        col_state = index_state % 3
+
+        row_goal = index_goal // 3
+        col_goal = index_goal % 3
+
+        distance += abs(row_state - row_goal) + abs(col_state - col_goal)
+
+    return distance
+
+def CHILD_NODE_A_sao(problem, parent, action):
+
+    next_state = problem.result(parent.state, action)
+    so_osai = KiemTraSoOSai(next_state, problem.goal)
+    h_cost_parent = mahatan_distance(parent.state, problem.goal)
+    h_cost= mahatan_distance(next_state, problem.goal)
+
+    next_cost = parent.path_cost - h_cost_parent + so_osai + h_cost# trừ đi h(node cha) cộng g(node con) cộng h(node con)
+    # mục đích để ko cộng dồn h(n)
+    child = Node(
+        next_state,
+        parent,
+        action,
+        next_cost
+    )
+    search_log.append( f"Generate {action} -> {child.state}" )
+    return child
+
+def A_sao(problem):
+
+    # node gốc
+    node = Node(problem.initial)
+    node.path_cost = mahatan_distance(node.state, problem.goal) 
+    if problem.goal_test(node.state):
+
+        return node
+
+
+    frontier = []
+    frontier.append(node)
+
+    reached = []
+
+
+    while len(frontier) > 0:
+
+        
+
+        node = frontier.pop(0)  # pop sẽ trả về giá trị của phần tử được xóa đồng thời dồn các phần tử còn lại qua bên trái
+        search_log.append( f"\nEXPAND: {node.state}" )
+        reached.append(node.state)
+
+        # kiểm tra goal trước khi tạo con
+        if problem.goal_test(node.state):
+
+            return node
+
+
+        # sinh node con
+        for action in problem.actions(node.state):
+
+            child = CHILD_NODE_A_sao(problem, node, action)
+
+            exist = False
+
+
+            for r in reached:
+
+                if r == child.state:
+                    exist = True
+                    break
+
+
+            # nếu chưa tồn tại
+            if exist == False:
+
+                sort_frontier(frontier, child)
+
+
+    return None
+
+def CHILD_NODE_IDA_sao(problem, parent, action):
+
+    next_state = problem.result(parent.state, action)
+    so_osai = KiemTraSoOSai(next_state, problem.goal)
+    h_cost_parent = mahatan_distance(parent.state, problem.goal)
+    h_cost= mahatan_distance(next_state, problem.goal)
+
+    next_cost = parent.path_cost - h_cost_parent + so_osai + h_cost# trừ đi h(node cha) cộng g(node con) cộng h(node con)
+    # mục đích để ko cộng dồn h(n)
+    child = Node(
+        next_state,
+        parent,
+        action,
+        next_cost
+    )
+    search_log.append( f"Generate {action} -> {child.state}" )
+    return child
+
+def depth_limited_IDA(problem, limit):
+
+    root = Node(problem.initial)
+    
+    root.path_cost = mahatan_distance(
+        root.state,
+        problem.goal
+    )
+
+    frontier = [root]
+
+    next_limit = float('inf')
+
+    while len(frontier) > 0:
+
+        node = frontier.pop(-1)
+
+        search_log.append(
+            f"\nEXPAND: {node.state}"
+        )
+
+        # goal test
+        if problem.goal_test(node.state):
+            return node, next_limit
+
+        # nếu vượt ngưỡng
+        if node.path_cost > limit:
+
+            next_limit = min(next_limit,node.path_cost)
+
+            continue
+
+        actions = list(
+            problem.actions(node.state)
+        )
+
+        actions.reverse()
+
+        for action in actions:
+
+            child = CHILD_NODE_IDA_sao(
+                problem,
+                node,
+                action
+            )
+
+            # chống cycle
+            if not is_cycle(node, child.state):
+                frontier.append(child)
+
+    return None, next_limit
+
+
+def IDA_sao(problem):
+
+    # limit ban đầu = h(root)
+    limit = mahatan_distance(
+        problem.initial,
+        problem.goal
+    )
+
+    while True:
+
+        result, new_limit = depth_limited_IDA(
+            problem,
+            limit
+        )
+
+        if result is not None:
+            return result
+
+        # không còn node nào
+        if new_limit == float('inf'):
+            return None
+
+        # tăng ngưỡng
+        limit = new_limit
+
+
+def Child_Node_Simple_Hill_Climbing(problem, parent, action):
+    next_state = problem.result(parent.state, action)
+    so_osai = KiemTraSoOSai(next_state, problem.goal)
+    next_cost = so_osai
+
+    child = Node(
+        next_state,
+        parent,
+        action,
+        next_cost
+    )
+    search_log.append( f"Generate {action} -> {child.state}" )
+    return child
+
+def Simple_Hill_Climbing(problem):
+    node  = Node(problem.initial)
+    node.path_cost = KiemTraSoOSai(node.state, problem.goal)
+
+    while True:
+        search_log.append( f"\nEXPAND: {node.state}" )
+        check_neighbor = False
+        for action in problem.actions(node.state):
+            child = Child_Node_Simple_Hill_Climbing(problem, node, action)
+            if child.path_cost < node.path_cost:
+                node = child
+                check_neighbor = True
+                break
+        if check_neighbor == False:
+            break
+
+    return node           
+
+
+def Best_Simple_Hill_Climbing(problem):
+    node  = Node(problem.initial)
+    node.path_cost = KiemTraSoOSai(node.state, problem.goal)
+
+    while True:
+        search_log.append( f"\nEXPAND: {node.state}" )
+        nebighbors = []
+        for action in problem.actions(node.state):
+            child = Child_Node_Simple_Hill_Climbing(problem, node, action)
+            if child.path_cost < node.path_cost:
+                nebighbors.append(child)
+
+        #sẽ sắp xếp tăng dần theo path_cost
+        nebighbors.sort(key=lambda x: x.path_cost)
+
+        if len(nebighbors) > 0:
+            node = nebighbors[0]           
+        else:
+            break
+    return node
 
 class PuzzleGUI:
 
@@ -533,7 +750,15 @@ class PuzzleGUI:
 
         self.algo_combo = ttk.Combobox(
             self.top_frame,
-            values=["BFS", "DFS", "IDS", "UCS","GREEDY"],
+            values=["BFS", 
+                    "DFS", 
+                    "IDS", 
+                    "UCS",
+                    "GREEDY",
+                    "A*",
+                    "IDA*",
+                    "Simple Hill Climbing",
+                    "Best Simple Hill Climbing"],
             state="readonly",
             width=10,
             font=("Segoe UI", 11)
@@ -665,7 +890,42 @@ class PuzzleGUI:
 
             self.cells.append(row)
 
-        # LOG FRAME
+
+        # =========================
+        # SEARCH PROCESS FRAME
+        # =========================
+        # FINAL PATH FRAME
+        self.path_frame = tk.Frame(
+            self.main_frame,
+            bg=self.BG_MAIN
+        )
+
+        self.path_frame.pack(
+            side=tk.LEFT,
+            padx=10
+        )
+
+        self.path_title = tk.Label(
+            self.path_frame,
+            text="Final Path",
+            font=("Segoe UI", 12, "bold"),
+            bg=self.BG_MAIN,
+            fg="#94e2d5"
+        )
+
+        self.path_title.pack(pady=5)
+
+        self.path_text = ScrolledText(
+            self.path_frame,
+            width=35,
+            height=20,
+            font=("Consolas", 10),
+            bg="#11111b",
+            fg="#f38ba8"
+        )
+
+        self.path_text.pack()
+
         self.log_frame = tk.Frame(
             self.main_frame,
             bg=self.BG_MAIN
@@ -676,17 +936,29 @@ class PuzzleGUI:
             padx=10
         )
 
+        self.log_title = tk.Label(
+            self.log_frame,
+            text="Search Process",
+            font=("Segoe UI", 12, "bold"),
+            bg=self.BG_MAIN,
+            fg="#f9e2af"
+        )
+
+        self.log_title.pack(pady=5)
+
         self.log_text = ScrolledText(
             self.log_frame,
-            width=35,
-            height=18,
-            font=("Consolas", 11),
+            width=45,
+            height=20,
+            font=("Consolas", 10),
             bg="#11111b",
             fg="#a6e3a1",
             insertbackground="white"
         )
 
         self.log_text.pack()
+
+
 
         # BUTTON FRAME
         self.control_frame = tk.Frame(
@@ -791,6 +1063,7 @@ class PuzzleGUI:
         # SHOW INITIAL
         self.show_state()
         self.show_log()
+        self.show_final_path()
 
 
     # LẤY ĐƯỜNG ĐI
@@ -855,52 +1128,36 @@ class PuzzleGUI:
 
 
     # HIỂN THỊ LOG
+
     def show_log(self):
 
-        self.log_text.delete(1.0, tk.END)
+        global search_log
+
+        self.log_text.delete(
+            1.0,
+            tk.END
+        )
 
         self.log_text.insert(
             tk.END,
-            "====== SOLUTION ======\n\n"
+            "====== SEARCH PROCESS ======\n\n"
         )
 
-        for node in self.path:
+        for log in search_log:
 
             self.log_text.insert(
                 tk.END,
-                f"Action: {node.action}\n"
+                log + "\n"
             )
 
-            self.log_text.insert(
-                tk.END,
-                f"Cost: {node.path_cost}\n"
-            )
+        self.log_text.see(tk.END)
 
-            s = node.state
 
-            self.log_text.insert(
-                tk.END,
-                f"{s[0]} {s[1]} {s[2]}\n"
-            )
-
-            self.log_text.insert(
-                tk.END,
-                f"{s[3]} {s[4]} {s[5]}\n"
-            )
-
-            self.log_text.insert(
-                tk.END,
-                f"{s[6]} {s[7]} {s[8]}\n"
-            )
-
-            self.log_text.insert(
-                tk.END,
-                "\n"
-            )
 
     # CHỌN THUẬT TOÁN
     def solve_selected_algorithm(self):
-
+        global search_log
+        search_log.clear()            
         selected = self.algo_combo.get()
 
         problem = Problem(
@@ -927,6 +1184,18 @@ class PuzzleGUI:
         elif selected == "GREEDY":
 
             result = GREEDY(problem)
+        elif selected == "A*":
+
+            result = A_sao(problem)
+        elif selected == "IDA*":
+
+            result = IDA_sao(problem)
+        elif selected == "Simple Hill Climbing":
+
+            result = Simple_Hill_Climbing(problem)
+        elif selected == "Best Simple Hill Climbing":
+
+            result = Best_Simple_Hill_Climbing(problem)
 
         end_time = time.time()
 
@@ -984,6 +1253,41 @@ class PuzzleGUI:
         self.current_index = 0
 
         self.show_state()
+    
+    def show_final_path(self):
+
+        self.path_text.delete(1.0, tk.END)
+
+        self.path_text.insert(
+            tk.END,
+            "====== FINAL PATH ======\n\n"
+        )
+
+        for i, node in enumerate(self.path):
+
+            action = node.action if node.action else "Start"
+
+            self.path_text.insert(
+                tk.END,
+                f"Step {i}: {action}\n"
+            )
+
+            state = node.state
+
+            # in ma trận 3x3
+            for r in range(3):
+
+                row = state[r*3:(r+1)*3]
+
+                self.path_text.insert(
+                    tk.END,
+                    f"{row}\n"
+                )
+
+            self.path_text.insert(
+                tk.END,
+                "\n"
+            )
 
 
 
@@ -1005,18 +1309,16 @@ problem = Problem(
     goal_state
 )
 
-# đo thời gian chạy DFS
+# đo thời gian chạy BFs
 start_time = time.time()
 
-result = deep_first_search(problem)
+result = breadth_first_search(problem)
 
 end_time = time.time()
 
 runtime = end_time - start_time
 
 if result != None:
-
-    print_solution(result)
 
     root = tk.Tk()
 
