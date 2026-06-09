@@ -1,8 +1,11 @@
+from platform import node
+import random
 import tkinter as tk
 from tkinter import messagebox,ttk
 from tkinter.scrolledtext import ScrolledText
 import time
-
+import math
+from collections import deque
 """
     https://github.com/24110159-pbao/BaiTapCaNhan.git
     Rule1: nếu vị trí ô trống (0) có row > 0 thì có thể di chuyển lên trên (Up), bằng cách hoán đổi với ô ở index - 3
@@ -21,6 +24,11 @@ import time
     Trạng thái mới được tạo bằng cách hoán đổi vị trí ô trống (0) với ô lân cận theo action tương ứng, sử dụng hàm result(state, action)
 """
 search_log = []# lưu các suy nghĩ của thuật toán để hiển thị trên giao diện
+MAX_LOG = 100# để giới hạn số lượng log hiển thị trên giao diện, tránh bị quá tải khi thuật toán sinh ra quá nhiều log
+
+def add_log(text):
+    if len(search_log) < MAX_LOG:
+        search_log.append(text)
 class Node:
     def __init__(self, state, parent=None, action=None, path_cost=0):
 
@@ -110,7 +118,7 @@ def CHILD_NODE(problem, parent, action):#cho deeo_first_search, breadth_first_se
         action,
         next_cost
     )
-    search_log.append( f"Generate {action} -> {child.state}" )
+    add_log( f"Generate {action} -> {child.state}" )
     return child
 
 
@@ -136,7 +144,7 @@ def deep_first_search(problem):
 
 
         node = frontier.pop(-1)# pop sẽ trả về giá trị của phần tử cuối cùng được xóa 
-        search_log.append( f"\nEXPAND: {node.state}" )
+        add_log( f"\nEXPAND: {node.state}" )
         explored.append(node.state)
 
 
@@ -193,7 +201,7 @@ def breadth_first_search(problem):
 
 
         node = frontier.pop(0)# pop sẽ trả về giá trị của phần tử được xóa đồng thời dồn các phần tử còn lại qua bên trái
-        search_log.append( f"\nEXPAND: {node.state}" )
+        add_log( f"\nEXPAND: {node.state}" )
         explored.append(node.state)
 
 
@@ -249,7 +257,7 @@ def depth_limited_search(problem, limit):
     while len(frontier) > 0:
 
         node = frontier.pop(-1)
-        search_log.append( f"\nEXPAND: {node.state}" )
+        add_log( f"\nEXPAND: {node.state}" )
         # goal test
         if problem.goal_test(node.state):
             return node
@@ -331,7 +339,7 @@ def CHILD_NODE_UCS(problem, parent, action):
         action,
         next_cost
     )
-    search_log.append( f"Generate {action} -> {child.state}" )
+    add_log( f"Generate {action} -> {child.state}" )
     return child
 
 def UCS(problem):
@@ -356,7 +364,7 @@ def UCS(problem):
         
 
         node = frontier.pop(0)  # pop sẽ trả về giá trị của phần tử được xóa đồng thời dồn các phần tử còn lại qua bên trái
-        search_log.append( f"\nEXPAND: {node.state}" )
+        add_log( f"\nEXPAND: {node.state}" )
         reached.append(node.state)
 
         # kiểm tra goal trước khi tạo con
@@ -402,7 +410,7 @@ def CHILD_NODE_GREEDY(problem, parent, action):
         action,
         next_cost
     )
-    search_log.append( f"Generate {action} -> {child.state}" )
+    add_log( f"Generate {action} -> {child.state}" )
     return child
 
 def GREEDY(problem):
@@ -422,7 +430,7 @@ def GREEDY(problem):
     while len(frontier) > 0:
 
         node = frontier.pop(0)
-        search_log.append( f"\nEXPAND: {node.state}" )
+        add_log( f"\nEXPAND: {node.state}" )
         reached.append(node.state)
 
         if problem.goal_test(node.state):
@@ -639,8 +647,8 @@ def IDA_sao(problem):
 
 def Child_Node_Simple_Hill_Climbing(problem, parent, action):
     next_state = problem.result(parent.state, action)
-    so_osai = KiemTraSoOSai(next_state, problem.goal)
-    next_cost = so_osai
+    mahatan = mahatan_distance(next_state, problem.goal)
+    next_cost = mahatan 
 
     child = Node(
         next_state,
@@ -653,7 +661,7 @@ def Child_Node_Simple_Hill_Climbing(problem, parent, action):
 
 def Simple_Hill_Climbing(problem):
     node  = Node(problem.initial)
-    node.path_cost = KiemTraSoOSai(node.state, problem.goal)
+    node.path_cost = mahatan_distance(node.state, problem.goal)
 
     while True:
         search_log.append( f"\nEXPAND: {node.state}" )
@@ -672,32 +680,509 @@ def Simple_Hill_Climbing(problem):
 
 def Best_Simple_Hill_Climbing(problem):
     node  = Node(problem.initial)
-    node.path_cost = KiemTraSoOSai(node.state, problem.goal)
+    node.path_cost = mahatan_distance(node.state, problem.goal)
 
     while True:
         search_log.append( f"\nEXPAND: {node.state}" )
-        nebighbors = []
+        neighbors  = []
         for action in problem.actions(node.state):
             child = Child_Node_Simple_Hill_Climbing(problem, node, action)
             if child.path_cost < node.path_cost:
-                nebighbors.append(child)
+                neighbors .append(child)
 
         #sẽ sắp xếp tăng dần theo path_cost
-        nebighbors.sort(key=lambda x: x.path_cost)
+        neighbors .sort(key=lambda x: x.path_cost)
 
-        if len(nebighbors) > 0:
-            node = nebighbors[0]           
+        if len(neighbors ) > 0:
+            node = neighbors [0]           
         else:
             break
     return node
 
+def Stochastic_Hill_Climbing(problem):
+    node  = Node(problem.initial)
+    node.path_cost = mahatan_distance(node.state, problem.goal)
+    
+    while True:
+        search_log.append( f"\nEXPAND: {node.state}" )
+        if problem.goal_test(node.state):
+            return node
+        neighbors  = []
+        for action in problem.actions(node.state):
+            child = Child_Node_Simple_Hill_Climbing(problem, node, action)
+            if child.path_cost < node.path_cost:
+                neighbors .append(child)
+
+        if len(neighbors ) > 0:
+            node = random.choice(neighbors )    
+        else:
+            print("No more neighbors to explore.")
+            break
+    return node
+
+def Random_Restart_Hill_Climbing(problem):
+    for i in range(100):
+        node  = Node(problem.initial)
+        node.path_cost = mahatan_distance(node.state, problem.goal)
+        while True:
+            search_log.append( f"\nEXPAND: {node.state}" )
+            if problem.goal_test(node.state):
+                return node
+            neighbors  = []
+            for action in problem.actions(node.state):
+                child = Child_Node_Simple_Hill_Climbing(problem, node, action)
+                if child.path_cost < node.path_cost:
+                    neighbors .append(child)
+
+            if len(neighbors ) > 0:
+                node = random.choice(neighbors )    
+            else:
+                print("No more neighbors to explore.")
+                break
+    return None
+
+def Local_Beem_Search(problem, k=3):
+
+    current_states = [Node(problem.initial)]
+
+    current_states[0].path_cost = mahatan_distance(
+        current_states[0].state,
+        problem.goal
+    )
+
+    while True:
+
+        neighbor_states = []
+
+        for node in current_states:
+
+            search_log.append(
+                f"\nEXPAND: {node.state}"
+            )
+
+            if problem.goal_test(node.state):
+                return node
+
+            for action in problem.actions(node.state):
+
+                child = Child_Node_Simple_Hill_Climbing(
+                    problem,
+                    node,
+                    action
+                )
+
+                neighbor_states.append(child)
+
+        if len(neighbor_states) == 0:
+
+            current_states.sort(
+                key=lambda x: x.path_cost
+            )
+
+            return current_states[0]
+
+        # kiểm tra goal
+        for node in neighbor_states:
+
+            if problem.goal_test(node.state):
+                return node
+
+        # lấy k trạng thái tốt nhất
+        neighbor_states.sort(
+            key=lambda x: x.path_cost
+        )
+
+        current_states = neighbor_states[:k]
+
+
+def CHILD_NODE_SA(problem, parent, action):
+
+    next_state = problem.result(parent.state, action)
+
+    child = Node(
+        next_state,
+        parent,
+        action,
+        parent.path_cost + 1
+    )
+
+    add_log(
+        f"Generate {action} -> {child.state}"
+    )
+
+    return child    
+
+def Simulated_Annealing(problem,T0=100,Tmin=0,alpha=0.96):
+        
+    current = Node(problem.initial)
+
+    T = T0
+
+    while T > Tmin:
+
+        add_log(
+            f"\nEXPAND: {current.state} | T={T}"
+        )
+
+        if problem.goal_test(current.state):
+            return current
+
+        actions = problem.actions(current.state)
+
+        if len(actions) == 0:
+            break
+
+        # chọn ngẫu nhiên 1 hàng xóm
+        action = random.choice(actions)
+
+        next_node = CHILD_NODE_SA(
+            problem,
+            current,
+            action
+        )
+
+        current_h = mahatan_distance(
+            current.state,
+            problem.goal
+        )
+
+        next_h = mahatan_distance(
+            next_node.state,
+            problem.goal
+        )
+
+        delta = next_h - current_h
+
+        # tốt hơn => nhận luôn
+        if delta < 0:
+
+            current = next_node
+
+            add_log(
+                f"Accept better state h={next_h}"
+            )
+
+        else:
+
+            p = math.exp(-delta / T)
+
+            r = random.random()
+
+            add_log(
+                f"Worse state: p={p:.4f}, r={r:.4f}"
+            )
+
+            if r < p:
+
+                current = next_node
+
+                add_log(
+                    "Accepted worse state"
+                )
+
+        T = int(alpha * T)
+
+    return current
+
+
+
+def random_state_from_goal(goal, moves=15):
+
+    state = goal.copy()
+
+    temp_problem = Problem(state, goal)
+
+    for _ in range(moves):
+
+        actions = temp_problem.actions(state)
+
+        action = random.choice(actions)
+
+        state = temp_problem.result(
+            state,
+            action
+        )
+
+    return state
+
+def belief_goal_test(problem, states):
+
+    return (
+        problem.goal_test(states[0])
+        and
+        problem.goal_test(states[1])
+    )
+
+
+def BELIEF_CHILD_NODE(
+        problem,
+        parent,
+        action):
+
+    new_states = []
+
+    for state in parent.state:
+
+        # nếu đã goal thì giữ nguyên
+        if problem.goal_test(state):
+
+            next_state = state.copy()
+
+        # nếu action hợp lệ
+        elif action in problem.actions(state):
+
+            next_state = problem.result(
+                state,
+                action
+            )
+
+        # nếu action không hợp lệ
+        else:
+
+            next_state = state.copy()
+
+        new_states.append(next_state)
+
+    child = Node(
+        new_states,
+        parent,
+        action,
+        parent.path_cost + 1
+    )
+
+    add_log(
+        f"Generate {action}"
+    )
+
+    add_log(
+        f"S1={new_states[0]}"
+    )
+
+    add_log(
+        f"S2={new_states[1]}"
+    )
+
+    return child
+
+def Belief_State_BFS(
+        problem,
+        state1,
+        state2):
+
+    root = Node(
+        [state1, state2]
+    )
+
+    frontier = deque([root])
+
+    explored = set()
+
+    while frontier:
+
+        node = frontier.popleft()
+
+        key = tuple(    
+            sorted([
+                tuple(node.state[0]),
+                tuple(node.state[1])
+            ])
+        )
+
+        if key in explored:
+            continue
+
+        explored.add(key)
+
+        add_log(
+            "\nEXPAND:"
+        )
+
+        add_log(
+            f"S1={node.state[0]}"
+        )
+
+        add_log(
+            f"S2={node.state[1]}"
+        )
+
+        if belief_goal_test(
+            problem,
+            node.state
+        ):
+            return node
+
+        for action in [
+            "Up",
+            "Down",
+            "Left",
+            "Right"
+        ]:
+
+            child = BELIEF_CHILD_NODE(
+                problem,
+                node,
+                action
+            )
+
+            child_key = tuple(    
+                sorted([
+                    tuple(child.state[0]),
+                    tuple(child.state[1])
+                ])
+            )
+
+            if child_key not in explored:
+
+                frontier.append(child)
+
+    return None
+
+def random_goal_pair():
+
+    goal1 = random_state_from_goal(
+        goal_state,
+        5
+    )
+
+    goal2 = random_state_from_goal(
+        goal_state,
+        10
+    )
+
+    while goal1 == goal2:
+
+        goal2 = random_state_from_goal(
+            goal_state,
+            10
+        )
+
+    return goal1, goal2
+
+def belief_multi_goal_test(
+        states,
+        goal1,
+        goal2):
+
+    s1 = states[0]
+    s2 = states[1]
+
+    return (
+
+        s1 == s2
+
+        and
+
+        (
+            s1 == goal1
+            or
+            s1 == goal2
+        )
+
+    )
+
+MAX_DEPTH = 20
+def Belief_State_BFS_MultiGoal(
+        problem,
+        state1,
+        state2,
+        goal1,
+        goal2):
+
+    root = Node(
+        [state1, state2]
+    )
+
+    frontier = deque([root])
+
+    explored = set()
+
+    while frontier:
+        
+
+        node = frontier.popleft()
+
+        if node.path_cost >= MAX_DEPTH:
+            continue
+
+        s1 = tuple(node.state[0])
+        s2 = tuple(node.state[1])
+
+        if s1 < s2:
+            key = (s1,s2)
+        else:
+            key = (s2,s1)
+
+        if key in explored:
+            continue
+
+        explored.add(key)
+
+        add_log(
+            "\nEXPAND:"
+        )
+
+        add_log(
+            f"S1={node.state[0]}"
+        )
+
+        add_log(
+            f"S2={node.state[1]}"
+        )
+
+        # GOAL TEST MỚI
+        if belief_multi_goal_test(
+                node.state,
+                goal1,
+                goal2):
+
+            return node
+
+        for action in [
+            "Up",
+            "Down",
+            "Left",
+            "Right"
+        ]:
+
+            child = BELIEF_CHILD_NODE(
+                problem,
+                node,
+                action
+            )
+
+            child_key = (
+                tuple(child.state[0]),
+                tuple(child.state[1])
+            )
+
+            if child_key not in explored:
+
+                frontier.append(child)
+
+    return None
+
+def random_state_with_fixed_7(goal,moves=20):
+
+    while True:
+
+        state = random_state_from_goal(
+            goal,
+            moves
+        )
+
+        if state[6] == 7:
+            return state
+
 class PuzzleGUI:
 
-    def __init__(self, root, solution_node, runtime):
+    def __init__(self, root, solution_node, runtime, goal1=None, goal2=None):
 
+        self.goal1 = goal1
+        self.goal2 = goal2
+
+        self.is_belief = False
         self.root = root
         self.root.title("8 Puzzle Visualizer")
-
 
         # MÀU SẮC
         self.BG_MAIN = "#1e1e2e"
@@ -758,7 +1243,16 @@ class PuzzleGUI:
                     "A*",
                     "IDA*",
                     "Simple Hill Climbing",
-                    "Best Simple Hill Climbing"],
+                    "Best Simple Hill Climbing",
+                    "Stochastic Hill Climbing",
+                    "Random Restart Hill Climbing",
+                    "Local Beam Search",
+                    "Simulated Annealing",
+                    "Belief State BFS",
+                    "Multi-Goal Belief State BFS",
+                    "7 Multi-Goal Belief State BFS"
+                    ],
+                    
             state="readonly",
             width=10,
             font=("Segoe UI", 11)
@@ -859,6 +1353,42 @@ class PuzzleGUI:
             side=tk.LEFT,
             padx=15
         )
+        self.board_frame2 = tk.Frame(
+            self.main_frame,
+            bg=self.BG_BOARD,
+            padx=10,
+            pady=10
+        )
+
+        self.cells2 = []
+
+        for i in range(3):
+
+            row = []
+
+            for j in range(3):
+
+                label = tk.Label(
+                    self.board_frame2,
+                    text="",
+                    width=5,
+                    height=2,
+                    font=("Segoe UI", 26, "bold"),
+                    fg=self.TEXT_CELL,
+                    borderwidth=0,
+                    relief="flat"
+                )
+
+                label.grid(
+                    row=i,
+                    column=j,
+                    padx=6,
+                    pady=6
+                )
+
+                row.append(label)
+
+            self.cells2.append(row)
 
         self.cells = []
 
@@ -895,6 +1425,8 @@ class PuzzleGUI:
         # SEARCH PROCESS FRAME
         # =========================
         # FINAL PATH FRAME
+
+
         self.path_frame = tk.Frame(
             self.main_frame,
             bg=self.BG_MAIN
@@ -1086,46 +1618,78 @@ class PuzzleGUI:
     def show_state(self):
 
         node = self.path[self.current_index]
+  
+        # ======================
+        # NORMAL MODE (1 BOARD)
+        # ======================
+        if not self.is_belief:
 
-        state = node.state
+            state = node.state
 
-        for i in range(9):
+            for i in range(9):
+                r, c = divmod(i, 3)
+                val = state[i]
 
-            row = i // 3
-            col = i % 3
+                if val == 0:
+                    self.cells[r][c].config(text="", bg=self.BG_EMPTY)
+                else:
+                    self.cells[r][c].config(
+                        text=str(val),
+                        bg=self.BG_CELL_ACTIVE if val % 2 == 0 else self.BG_CELL
+                    )
 
-            value = state[i]
+            self.board_frame2.pack_forget()
 
-            if value == 0:
+        # ======================
+        # BELIEF MODE (2 BOARDS)
+        # ======================
+        else:
 
-                self.cells[row][col].config(
+            state1, state2 = node.state
 
-                    text="",
+            if not self.board_frame2.winfo_ismapped():
 
-                    bg=self.BG_EMPTY
+                self.board_frame2.pack(
+                    side=tk.LEFT,
+                    padx=15
                 )
 
-            else:
+            # BOARD 1
+            for i in range(9):
+                r, c = divmod(i, 3)
+                val = state1[i]
 
-                self.cells[row][col].config(
+                if val == 0:
+                    self.cells[r][c].config(text="", bg=self.BG_EMPTY)
+                else:
+                    self.cells[r][c].config(
+                        text=str(val),
+                        bg=self.BG_CELL_ACTIVE if val % 2 == 0 else self.BG_CELL
+                    )
 
-                    text=str(value),
+            # BOARD 2
+            for i in range(9):
+                r, c = divmod(i, 3)
+                val = state2[i]
 
-                    bg=self.BG_CELL_ACTIVE
-                    if value % 2 == 0
-                    else self.BG_CELL
-                )
+                if val == 0:
+                    self.cells2[r][c].config(text="", bg=self.BG_EMPTY)
+                else:
+                    self.cells2[r][c].config(
+                        text=str(val),
+                        bg=self.BG_CELL
+                    )
 
-        action_text = node.action if node.action else "Start"
-
+        # ======================
+        # INFO UPDATE
+        # ======================
         self.action_label.config(
-            text=f"Action: {action_text}"
+            text=f"Action: {node.action if node.action else 'Start'}"
         )
 
         self.cost_label.config(
             text=f"Cost: {node.path_cost}"
         )
-
 
     # HIỂN THỊ LOG
 
@@ -1156,9 +1720,26 @@ class PuzzleGUI:
 
     # CHỌN THUẬT TOÁN
     def solve_selected_algorithm(self):
+
         global search_log
-        search_log.clear()            
+
+        search_log.clear()
+
         selected = self.algo_combo.get()
+
+        if selected in [
+            "Belief State BFS",
+            "Multi-Goal Belief State BFS",
+            "7 Multi-Goal Belief State BFS"
+        ]:
+            self.is_belief = True
+            self.board_frame2.pack(
+                    side=tk.LEFT,
+                    padx=15
+                )
+        else:
+            self.is_belief = False
+            self.board_frame2.pack_forget()
 
         problem = Problem(
             initial_state,
@@ -1178,24 +1759,140 @@ class PuzzleGUI:
         elif selected == "IDS":
 
             result = iterative_deepening_search(problem)
+
         elif selected == "UCS":
 
             result = UCS(problem)
+
         elif selected == "GREEDY":
 
             result = GREEDY(problem)
+
         elif selected == "A*":
 
             result = A_sao(problem)
+
         elif selected == "IDA*":
 
             result = IDA_sao(problem)
+
         elif selected == "Simple Hill Climbing":
 
             result = Simple_Hill_Climbing(problem)
+
         elif selected == "Best Simple Hill Climbing":
 
             result = Best_Simple_Hill_Climbing(problem)
+
+        elif selected == "Stochastic Hill Climbing":
+
+            result = Stochastic_Hill_Climbing(problem)
+
+        elif selected == "Random Restart Hill Climbing":
+
+            result = Random_Restart_Hill_Climbing(problem)
+
+        elif selected == "Local Beam Search":
+
+            result = Local_Beem_Search(problem)
+
+        elif selected == "Simulated Annealing":
+
+            result = Simulated_Annealing(problem)
+
+        elif selected == "Belief State BFS":
+
+            state1 = random_state_from_goal(
+                goal_state,
+                10
+            )
+
+            state2 = random_state_from_goal(
+                goal_state,
+                15
+            )
+
+            result = Belief_State_BFS(
+                problem,
+                state1,
+                state2
+            )
+        elif selected == "Multi-Goal Belief State BFS":
+            
+            state1 = random_state_from_goal(
+                goal_state,
+                10
+            )
+
+            state2 = random_state_from_goal(
+                goal_state,
+                15
+            )
+
+            goal1, goal2 = random_goal_pair()
+            
+            search_log.append(
+                "\n========== GOALS =========="
+            )
+
+            search_log.append(
+                f"Goal1={goal1}"
+            )
+
+            search_log.append(
+                f"Goal2={goal2}"
+            )
+
+            result = Belief_State_BFS_MultiGoal(
+                problem,
+                state1,
+                state2,
+                goal1,
+                goal2
+            )
+        elif selected == "7 Multi-Goal Belief State BFS":
+            
+            state1 = random_state_with_fixed_7(
+                goal_state,
+                20
+            )
+
+            state2 = random_state_with_fixed_7(
+                goal_state,
+                30
+            )
+
+            while state1 == state2:
+                state2 = random_state_with_fixed_7(
+                    goal_state,
+                    30
+                )
+
+            goal1, goal2 = random_goal_pair()
+            
+            search_log.append(
+                "\n========== GOALS =========="
+            )
+
+            search_log.append(
+                f"Goal1={goal1}"
+            )
+
+            search_log.append(
+                f"Goal2={goal2}"
+            )
+
+            result = Belief_State_BFS_MultiGoal(
+                problem,
+                state1,
+                state2,
+                goal1,
+                goal2
+            )
+
+        else:
+
+            result = None
 
         end_time = time.time()
 
@@ -1215,6 +1912,8 @@ class PuzzleGUI:
 
             self.show_log()
 
+            self.show_final_path()
+
     # NEXT STEP
     def next_step(self):
 
@@ -1223,6 +1922,8 @@ class PuzzleGUI:
             self.current_index += 1
 
             self.show_state()
+
+            self.show_final_path()
 
         else:
 
@@ -1252,11 +1953,41 @@ class PuzzleGUI:
 
         self.current_index = 0
 
+        selected = self.algo_combo.get()
+
+        self.is_belief = (
+            selected == "Belief State BFS"
+            or 
+            selected == "Multi-Goal Belief State BFS"
+            or
+            selected == "7 Multi-Goal Belief State BFS"
+        )
+
+        if not self.is_belief:
+            self.board_frame2.pack_forget()
+
         self.show_state()
     
     def show_final_path(self):
+        self.path_text.insert(
+            tk.END,
+            "\n===== GOALS =====\n"
+        )
 
-        self.path_text.delete(1.0, tk.END)
+        self.path_text.insert(
+            tk.END,
+            f"Goal1 = {self.goal1}\n"
+        )
+
+        self.path_text.insert(
+            tk.END,
+            f"Goal2 = {self.goal2}\n\n"
+        )
+
+        self.path_text.delete(
+            1.0,
+            tk.END
+        )
 
         self.path_text.insert(
             tk.END,
@@ -1265,30 +1996,74 @@ class PuzzleGUI:
 
         for i, node in enumerate(self.path):
 
-            action = node.action if node.action else "Start"
+            action = (
+                node.action
+                if node.action
+                else "Start"
+            )
 
             self.path_text.insert(
                 tk.END,
                 f"Step {i}: {action}\n"
             )
 
-            state = node.state
+            # BELIEF MODE
+            if self.is_belief:
 
-            # in ma trận 3x3
-            for r in range(3):
-
-                row = state[r*3:(r+1)*3]
+                state1, state2 = node.state
 
                 self.path_text.insert(
                     tk.END,
-                    f"{row}\n"
+                    "State 1\n"
                 )
+
+                for r in range(3):
+
+                    row = state1[
+                        r*3:(r+1)*3
+                    ]
+
+                    self.path_text.insert(
+                        tk.END,
+                        f"{row}\n"
+                    )
+
+                self.path_text.insert(
+                    tk.END,
+                    "\nState 2\n"
+                )
+
+                for r in range(3):
+
+                    row = state2[
+                        r*3:(r+1)*3
+                    ]
+
+                    self.path_text.insert(
+                        tk.END,
+                        f"{row}\n"
+                    )
+
+            # NORMAL MODE
+            else:
+
+                state = node.state
+
+                for r in range(3):
+
+                    row = state[
+                        r*3:(r+1)*3
+                    ]
+
+                    self.path_text.insert(
+                        tk.END,
+                        f"{row}\n"
+                    )
 
             self.path_text.insert(
                 tk.END,
                 "\n"
             )
-
 
 
 # MAIN
