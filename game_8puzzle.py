@@ -24,11 +24,12 @@ from collections import deque
     Trạng thái mới được tạo bằng cách hoán đổi vị trí ô trống (0) với ô lân cận theo action tương ứng, sử dụng hàm result(state, action)
 """
 search_log = []# lưu các suy nghĩ của thuật toán để hiển thị trên giao diện
-MAX_LOG = 100# để giới hạn số lượng log hiển thị trên giao diện, tránh bị quá tải khi thuật toán sinh ra quá nhiều log
+MAX_LOG = 200# để giới hạn số lượng log hiển thị trên giao diện, tránh bị quá tải khi thuật toán sinh ra quá nhiều log
 
 def add_log(text):
     if len(search_log) < MAX_LOG:
         search_log.append(text)
+
 class Node:
     def __init__(self, state, parent=None, action=None, path_cost=0):
 
@@ -492,7 +493,7 @@ def CHILD_NODE_A_sao(problem, parent, action):
         action,
         next_cost
     )
-    search_log.append( f"Generate {action} -> {child.state}" )
+    add_log( f"Generate {action} -> {child.state}" )
     return child
 
 def A_sao(problem):
@@ -516,7 +517,7 @@ def A_sao(problem):
         
 
         node = frontier.pop(0)  # pop sẽ trả về giá trị của phần tử được xóa đồng thời dồn các phần tử còn lại qua bên trái
-        search_log.append( f"\nEXPAND: {node.state}" )
+        add_log( f"\nEXPAND: {node.state}" )
         reached.append(node.state)
 
         # kiểm tra goal trước khi tạo con
@@ -563,7 +564,7 @@ def CHILD_NODE_IDA_sao(problem, parent, action):
         action,
         next_cost
     )
-    search_log.append( f"Generate {action} -> {child.state}" )
+    add_log( f"Generate {action} -> {child.state}" )
     return child
 
 def depth_limited_IDA(problem, limit):
@@ -583,7 +584,7 @@ def depth_limited_IDA(problem, limit):
 
         node = frontier.pop(-1)
 
-        search_log.append(
+        add_log(
             f"\nEXPAND: {node.state}"
         )
 
@@ -656,7 +657,7 @@ def Child_Node_Simple_Hill_Climbing(problem, parent, action):
         action,
         next_cost
     )
-    search_log.append( f"Generate {action} -> {child.state}" )
+    add_log( f"Generate {action} -> {child.state}" )
     return child
 
 def Simple_Hill_Climbing(problem):
@@ -664,7 +665,7 @@ def Simple_Hill_Climbing(problem):
     node.path_cost = mahatan_distance(node.state, problem.goal)
 
     while True:
-        search_log.append( f"\nEXPAND: {node.state}" )
+        add_log( f"\nEXPAND: {node.state}" )
         check_neighbor = False
         for action in problem.actions(node.state):
             child = Child_Node_Simple_Hill_Climbing(problem, node, action)
@@ -683,7 +684,7 @@ def Best_Simple_Hill_Climbing(problem):
     node.path_cost = mahatan_distance(node.state, problem.goal)
 
     while True:
-        search_log.append( f"\nEXPAND: {node.state}" )
+        add_log( f"\nEXPAND: {node.state}" )
         neighbors  = []
         for action in problem.actions(node.state):
             child = Child_Node_Simple_Hill_Climbing(problem, node, action)
@@ -704,7 +705,7 @@ def Stochastic_Hill_Climbing(problem):
     node.path_cost = mahatan_distance(node.state, problem.goal)
     
     while True:
-        search_log.append( f"\nEXPAND: {node.state}" )
+        add_log( f"\nEXPAND: {node.state}" )
         if problem.goal_test(node.state):
             return node
         neighbors  = []
@@ -725,7 +726,7 @@ def Random_Restart_Hill_Climbing(problem):
         node  = Node(problem.initial)
         node.path_cost = mahatan_distance(node.state, problem.goal)
         while True:
-            search_log.append( f"\nEXPAND: {node.state}" )
+            add_log( f"\nEXPAND: {node.state}" )
             if problem.goal_test(node.state):
                 return node
             neighbors  = []
@@ -756,7 +757,7 @@ def Local_Beem_Search(problem, k=3):
 
         for node in current_states:
 
-            search_log.append(
+            add_log(
                 f"\nEXPAND: {node.state}"
             )
 
@@ -1172,6 +1173,509 @@ def random_state_with_fixed_7(goal,moves=20):
 
         if state[6] == 7:
             return state
+#thuật toán mới 1 bảng, bằng backtracking
+def constraint_test(index):
+    goal = [
+        1,2,3,
+        4,5,6,
+        7,8,0
+    ]
+    return goal[index]
+
+def Backtracking(state, index=0, used=None):
+
+
+    if used is None:
+        used = set()
+
+    if index == 9:
+
+        add_log(f"GOAL FOUND {state}")
+        return state.copy()
+
+    candidates = [x for x in range(9) if x not in used]
+
+    random.shuffle(candidates)
+
+    for value in candidates:
+
+        add_log(
+            f"Try coordinate=({index//3}, {index%3}) value={value}"
+        )
+
+        if value != constraint_test(index):
+
+            add_log(
+                f"Reject value={value}"
+            )
+
+            continue
+
+        state[index] = value
+        used.add(value)
+
+        add_log(
+            f"Accept -> {state.copy()}"
+        )
+
+        result = Backtracking(
+            state,
+            index + 1,
+            used
+        )
+
+        if result is not None:
+            return result
+
+        state[index] = 0
+        used.remove(value)
+
+    return None
+#thuật toán and or search 
+MAX_ANDOR_DEPTH =4
+def nondeterministic_results(problem, state, action):
+
+    results = []
+
+    main_state = problem.result(state, action)
+    results.append(main_state)
+
+    actions = problem.actions(main_state)
+
+    count = 0
+
+    for a in actions:
+
+        if count >= 2:
+            break
+
+        s = problem.result(main_state, a)
+
+        if s not in results:
+            results.append(s)
+            count += 1
+
+    return results
+
+def OR_SEARCH(problem,
+              state,
+              parent,
+              path,
+              depth):
+
+    add_log(
+        f"\nOR depth={depth}: {state}"
+    )
+
+    if problem.goal_test(state):
+
+        add_log(
+            "SUCCESS (goal)"
+        )
+
+        return Node(
+            state,
+            parent
+        )
+
+    if depth >= MAX_ANDOR_DEPTH:
+
+        add_log(
+            "FAILURE (depth)"
+        )
+
+        return None
+
+    if state in path:
+
+        add_log(
+            "FAILURE (cycle)"
+        )
+
+        return None
+    actions = problem.actions(state)
+
+    priority = [
+        "Down",
+        "Right",
+        "Left",
+        "Up"
+    ]
+
+    actions.sort(
+        key=lambda x: priority.index(x)
+    )
+    for action in actions:
+
+        add_log(
+            f"Try Action {action}"
+        )
+
+        result_states = nondeterministic_results(
+            problem,
+            state,
+            action
+        )
+
+        plan = AND_SEARCH(
+            problem,
+            result_states,
+            Node(state,parent,action),
+            path + [state],
+            depth + 1
+        )
+
+        if plan is not None:
+
+            add_log(
+                f"Action {action} ACCEPTED"
+            )
+
+            return plan
+
+        add_log(
+            f"Action {action} REJECTED"
+        )
+
+    return None
+
+def AND_SEARCH(problem,
+               states,
+               parent,
+               path,
+               depth):
+
+    add_log(
+        f"AND depth={depth}"
+    )
+
+    success_node = None
+
+    for i, s in enumerate(states):
+
+        add_log(
+            f"Check S{i+1}: {s}"
+        )
+
+        result = OR_SEARCH(
+            problem,
+            s,
+            parent,
+            path,
+            depth
+        )
+
+        if result is None:
+
+            add_log(
+                f"S{i+1} -> FAILURE"
+            )
+
+            return None
+
+        add_log(
+            f"S{i+1} -> SUCCESS"
+        )
+
+        success_node = result
+
+    return success_node
+
+def AND_OR_GRAPH_SEARCH(problem):
+
+    search_log.clear()
+    
+    add_log(
+        
+        "===== AND OR SEARCH ====="
+    )
+
+    root = Node(
+        problem.initial
+    )
+
+    result = OR_SEARCH(
+        problem,
+        problem.initial,
+        None,
+        [],
+        0
+    )
+
+    return result
+
+#thuật toán ac-3
+from collections import deque
+
+def AC3():
+
+    add_log(
+        "\n===== AC3 START ====="
+    )
+
+    goal = [
+        1,2,3,
+        4,5,6,
+        7,8,0
+    ]
+
+    # DOMAIN BAN ĐẦU
+    domains = {}
+
+    for i in range(9):
+
+        domains[i] = list(range(9))
+
+        add_log(
+            f"D(X{i}) = {domains[i]}"
+        )
+
+    add_log("")
+
+    # ÁP RÀNG BUỘC Xi = goal[i]
+    for fixed_var in range(9):
+
+        add_log(
+            f"\nPROCESS X{fixed_var}"
+        )
+
+        add_log(
+            f"Constraint: X{fixed_var} = {goal[fixed_var]}"
+        )
+
+        domains[fixed_var] = [goal[fixed_var]]
+
+        add_log(
+            f"D(X{fixed_var}) = {domains[fixed_var]}"
+        )
+
+        fixed_value = goal[fixed_var]
+
+        for other in range(9):
+
+            if other == fixed_var:
+                continue
+
+            add_log(
+                f"\nREVISE(X{other}, X{fixed_var})"
+            )
+
+            if fixed_value in domains[other]:
+
+                domains[other].remove(
+                    fixed_value
+                )
+
+                add_log(
+                    f"Remove {fixed_value} from X{other}"
+                )
+
+                add_log(
+                    f"D(X{other}) = {domains[other]}"
+                )
+
+                if len(domains[other]) == 0:
+
+                    add_log(
+                        "FAILURE: Empty Domain"
+                    )
+
+                    return None
+    add_log(
+        "\n===== FINAL DOMAINS ====="
+    )
+
+    result = []
+
+    for i in range(9):
+
+        add_log(
+            f"X{i} -> {domains[i]}"
+        )
+
+        result.append(
+            domains[i][0]
+        )
+
+    add_log(
+        f"\nAC3 RESULT = {result}"
+    )
+
+    return result
+#min-conflicts
+def count_conflicts(state, goal):
+
+    conflicts = 0
+
+    # Constraint 1:
+    # Xi phải bằng goal[i]
+
+    for i in range(9):
+
+        if state[i] != goal[i]:
+
+            conflicts += 1
+
+    # Constraint 2:
+    # AllDifferent
+
+    for i in range(9):
+
+        for j in range(i + 1, 9):
+
+            if state[i] == state[j]:
+
+                conflicts += 1
+
+    return conflicts
+def conflicted_variables(state, goal):
+
+    vars = []
+
+    for i in range(9):
+
+        conflict = False
+
+        # sai goal
+        if state[i] != goal[i]:
+
+            conflict = True
+
+        # trùng giá trị
+        for j in range(9):
+
+            if i != j and state[i] == state[j]:
+
+                conflict = True
+
+        if conflict:
+
+            vars.append(i)
+
+    return vars
+def Min_Conflicts(problem, max_steps=200):
+
+    add_log(
+        "\n===== MIN CONFLICTS ====="
+    )
+
+    # ----------------------
+    # Random Initial State
+    # ----------------------
+
+    current = [random.randint(0,8)
+               for _ in range(9)]
+
+    add_log(
+        f"\nInitial State:"
+    )
+
+    add_log(
+        str(current)
+    )
+
+    for step in range(max_steps):
+
+        add_log(
+            f"\n===== STEP {step+1} ====="
+        )
+
+        current_conflicts = count_conflicts(
+            current,
+            problem.goal
+        )
+
+        add_log(
+            f"Total Conflicts = {current_conflicts}"
+        )
+
+        # GOAL
+        if current_conflicts == 0:
+
+            add_log(
+                "\nGOAL FOUND"
+            )
+
+            return Node(current)
+
+        # ----------------------
+        # Chọn biến lỗi ngẫu nhiên
+        # ----------------------
+
+        conflict_vars = conflicted_variables(
+            current,
+            problem.goal
+        )
+
+        var = random.choice(
+            conflict_vars
+        )
+
+        add_log(
+            f"Choose Variable X{var}"
+        )
+
+        best_values = []
+
+        best_conflict = float('inf')
+
+        # ----------------------
+        # Thử mọi giá trị
+        # ----------------------
+
+        for value in range(9):
+            if value == current[var]:
+                continue
+
+
+            temp = current.copy()
+
+            temp[var] = value
+
+            c = count_conflicts(
+                temp,
+                problem.goal
+            )
+
+            add_log(
+                f"Try X{var}={value} -> conflicts={c}"
+            )
+
+            if c < best_conflict:
+
+                best_conflict = c
+
+                best_values = [value]
+
+            elif c == best_conflict:
+
+                best_values.append(
+                    value
+                )
+
+        chosen_value = random.choice(
+            best_values
+        )
+
+        add_log(
+            f"Best Conflict = {best_conflict}"
+        )
+
+        add_log(
+            f"Assign X{var}={chosen_value}"
+        )
+
+        current[var] = chosen_value
+
+        add_log(
+            f"State = {current}"
+        )
+
+    add_log(
+        "\nFAILURE"
+    )
+
+    return None
 
 class PuzzleGUI:
 
@@ -1250,7 +1754,11 @@ class PuzzleGUI:
                     "Simulated Annealing",
                     "Belief State BFS",
                     "Multi-Goal Belief State BFS",
-                    "7 Multi-Goal Belief State BFS"
+                    "7 Multi-Goal Belief State BFS",
+                    "Backtracking",
+                    "AND-OR Search",
+                    "AC-3",
+                    "Min-Conflicts"
                     ],
                     
             state="readonly",
@@ -1694,8 +2202,10 @@ class PuzzleGUI:
     # HIỂN THỊ LOG
 
     def show_log(self):
+        
 
         global search_log
+        
 
         self.log_text.delete(
             1.0,
@@ -1831,15 +2341,15 @@ class PuzzleGUI:
 
             goal1, goal2 = random_goal_pair()
             
-            search_log.append(
+            add_log(
                 "\n========== GOALS =========="
             )
 
-            search_log.append(
+            add_log(
                 f"Goal1={goal1}"
             )
 
-            search_log.append(
+            add_log(
                 f"Goal2={goal2}"
             )
 
@@ -1870,15 +2380,15 @@ class PuzzleGUI:
 
             goal1, goal2 = random_goal_pair()
             
-            search_log.append(
+            add_log(
                 "\n========== GOALS =========="
             )
 
-            search_log.append(
+            add_log(
                 f"Goal1={goal1}"
             )
 
-            search_log.append(
+            add_log(
                 f"Goal2={goal2}"
             )
 
@@ -1889,7 +2399,37 @@ class PuzzleGUI:
                 goal1,
                 goal2
             )
+        elif selected == "Backtracking":
 
+            init_state = [0] * 9
+
+            final_state = Backtracking(init_state)
+
+            if final_state:
+                result = Node(final_state)
+            else:
+                result = None
+        elif selected == "AND-OR Search":
+
+            result = AND_OR_GRAPH_SEARCH(problem)
+            self.show_log()
+
+        elif selected == "AC-3":
+
+            final_state = AC3()
+
+            if final_state:
+
+                result = Node(
+                    final_state
+                )
+
+            else:
+
+                result = None
+        elif selected == "Min-Conflicts":
+
+            result = Min_Conflicts(problem)
         else:
 
             result = None
