@@ -199,6 +199,5 @@ Chương trình hiển thị:
     ưu.
 -   Các thuật toán ngẫu nhiên có thể cho kết quả khác nhau mỗi lần chạy.
 
-## 13. Repository
 
 https://github.com/24110159-pbao/BaiTapCaNhan.git
