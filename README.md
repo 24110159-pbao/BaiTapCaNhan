@@ -1,291 +1,49 @@
-# 8-Puzzle Solver - BFS, DFS, IDS, UCS, GREEDY
+# 8 Puzzle AI Visualizer
 
-## Giới thiệu
+## 1. Giới thiệu
 
-Project mô phỏng bài toán **8-Puzzle** bằng Python và Tkinter.
+Đây là chương trình mô phỏng bài toán **8-Puzzle** bằng Python.
+Chương trình sử dụng giao diện Tkinter để trực quan hóa quá trình tìm kiếm đường đi từ trạng thái ban đầu đến trạng thái mục tiêu.
 
-Chương trình cho phép:
+Project hỗ trợ nhiều thuật toán tìm kiếm trong AI:
 
-* Giải bài toán 8-puzzle
-* Minh họa từng bước di chuyển
-* So sánh các thuật toán tìm kiếm:
+- BFS (Breadth First Search)
+- DFS (Depth First Search)
+- IDS (Iterative Deepening Search)
+- UCS (Uniform Cost Search)
+- Greedy Best First Search
+- A*
+- IDA*
+- Simple Hill Climbing
+- Best Simple Hill Climbing
+- Stochastic Hill Climbing
+- Random Restart Hill Climbing
+- Local Beam Search
+- Simulated Annealing
+- Belief State BFS
+- Multi Goal Belief State BFS
+- Backtracking
+- AND-OR Search
+- AC-3
+- Min-Conflicts
 
-  * BFS (Breadth First Search)
-  * DFS (Depth First Search)
-  * IDS (Iterative Deepening Search)
 
----
+## 2. Yêu cầu hệ thống
 
-# Mô tả bài toán
+- Python >= 3.8
 
-8-Puzzle gồm:
+Thư viện sử dụng:
 
-* 8 ô số từ 1 → 8
-* 1 ô trống (0)
+- tkinter (có sẵn trong Python)
+- random
+- time
+- math
+- collections
 
-Mục tiêu:
 
-Biến đổi từ trạng thái ban đầu (`initial_state`) sang trạng thái đích (`goal_state`) bằng cách di chuyển ô trống.
+## 3. Cách chạy chương trình
 
-Ví dụ:
+Clone project:
 
-Initial State:
-
-```text
-1 2 3
-4 0 6
-7 5 8
-```
-
-Goal State:
-
-```text
-1 2 3
-4 5 6
-7 8 0
-```
-
----
-
-# Luật di chuyển
-
-Ô trống (0) có thể:
-
-* Up
-* Down
-* Left
-* Right
-
-nếu không vượt biên của bảng 3x3.
-
----
-
-# Cấu trúc chương trình
-
-## Class Node
-
-Lưu thông tin của mỗi node:
-
-* state
-* parent
-* action
-* path_cost
-
----
-
-## Class Problem
-
-Định nghĩa:
-
-* trạng thái đầu
-* trạng thái đích
-* actions(state)
-* result(state, action)
-* goal_test(state)
-
----
-
-# Các thuật toán tìm kiếm
-
-## 1. Breadth First Search (BFS)
-
-### Ý tưởng
-
-BFS mở rộng node theo từng mức độ sâu.
-
-Node được đưa vào queue theo cơ chế FIFO.
-
-### Đặc điểm
-
-* Tìm được đường đi ngắn nhất
-* Đầy đủ (complete)
-* Optimal với cost bằng nhau
-
-### Ưu điểm
-
-* Đảm bảo lời giải tối ưu
-* Phù hợp khi lời giải nằm gần root
-
-### Nhược điểm
-
-* Tốn nhiều bộ nhớ
-* Frontier tăng rất nhanh
-
-### Độ phức tạp
-
-```text
-Time  : O(b^d)
-Space : O(b^d)
-```
-
----
-
-## 2. Depth First Search (DFS)
-
-### Ý tưởng
-
-DFS đi sâu nhất có thể trước rồi mới quay lui.
-
-Sử dụng stack (LIFO).
-
-### Đặc điểm
-
-* Không đảm bảo tối ưu
-* Có thể đi sâu vô ích
-
-### Ưu điểm
-
-* Bộ nhớ nhỏ
-* Thường chạy nhanh hơn BFS
-
-### Nhược điểm
-
-* Có thể không tìm ra đường ngắn nhất
-* Có thể bị lặp vô hạn nếu không chống cycle
-
-### Độ phức tạp
-
-```text
-Time  : O(b^m)
-Space : O(bm)
-```
-
----
-
-## 3. Iterative Deepening Search (IDS)
-
-### Ý tưởng
-
-IDS kết hợp:
-
-* DFS
-* Depth Limited Search (DLS)
-
-Thuật toán sẽ:
-
-* tìm với depth = 0
-* depth = 1
-* depth = 2
-* ...
-
-cho đến khi tìm được lời giải.
-
-### Đặc điểm
-
-* Optimal như BFS
-* Memory nhỏ như DFS
-
-### Ưu điểm
-
-* Ít tốn RAM
-* Đảm bảo tìm lời giải ngắn nhất
-* Không cần biết trước độ sâu lời giải
-
-### Nhược điểm
-
-* Phải tìm lại nhiều node
-* Chậm hơn DFS/BFS trong bài toán nhỏ
-
-### Độ phức tạp
-
-```text
-Time  : O(b^d)
-Space : O(bd)
-```
-
----
-# 4. Uniform Cost Search (UCS)
-
-### Ý tưởng
-
-UCS mở rộng node có chi phí nhỏ nhất trước.
-
-Trong chương trình này:
-
-* cost được tính dựa trên heuristic
-* heuristic = số ô sai vị trí
-
-Node có `path_cost` nhỏ hơn sẽ được ưu tiên mở rộng trước.
-
-### Đặc điểm
-
-* Sử dụng frontier được sắp xếp theo cost
-* Node có cost nhỏ nhất luôn được mở rộng trước
-* Có sử dụng heuristic để định hướng tìm kiếm
-
-### Ưu điểm
-
-* Tìm kiếm có định hướng tốt hơn BFS/DFS
-* Có thể giảm số lượng node cần mở rộng
-* Hoạt động hiệu quả trên bài toán 8-puzzle
-
-### Nhược điểm
-
-* Frontier phải sắp xếp liên tục
-* Tốn nhiều bộ nhớ khi số node lớn
-* Không đảm bảo tối ưu tuyệt đối do sử dụng heuristic
-
-### Độ phức tạp
-
-```text
-Time  : O(b^d)
-Space : O(b^d)
-```
-
----
-
-## 5. Greedy Best First Search
-
-### Ý tưởng
-
-Greedy chỉ quan tâm node nào gần trạng thái đích nhất.
-
-Trong chương trình:
-
-* heuristic = số ô sai vị trí
-
-Node có heuristic nhỏ nhất sẽ được mở rộng trước.
-
-### Đặc điểm
-
-* Chỉ sử dụng heuristic
-* Không quan tâm tổng cost đã đi
-* Frontier được sắp xếp theo heuristic
-
-### Ưu điểm
-
-* Tốc độ tìm kiếm nhanh
-* Giảm số lượng node cần duyệt
-* Phù hợp với bài toán 8-puzzle
-
-### Nhược điểm
-
-* Không đảm bảo tìm được lời giải tối ưu
-* Có thể đi vào hướng không tốt
-* Kết quả phụ thuộc vào heuristic
-
-### Độ phức tạp
-
-```text
-Time  : O(b^m)
-Space : O(b^m)
-```
-
-
-# Giao diện (UI)
-
-Giao diện được xây dựng bằng Tkinter gồm:
-
-* Hiển thị bảng 3x3
-* Chọn thuật toán
-* Hiển thị runtime
-* Next Step
-* Auto Run
-* Reload
-
-Ngoài ra chương trình còn hiển thị:
-
-* action
-* cost
-* đường đi lời giải
-
+```bash
+git clone https://github.com/24110159-pbao/BaiTapCaNhan.git
